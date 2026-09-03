@@ -16,3 +16,14 @@ else()
 endif()
 add_test(NAME rb_broker COMMAND rb_broker)
 
+add_executable(rb_multiprocess test_multiprocess.cpp)
+target_link_libraries(rb_multiprocess PRIVATE ResourceBroker::resourcebroker ws2_32)
+target_include_directories(rb_multiprocess PRIVATE ${CMAKE_SOURCE_DIR}/tools)
+if(MSVC)
+    target_compile_options(rb_multiprocess PRIVATE /W4 /WX /EHsc)
+else()
+    target_compile_options(rb_multiprocess PRIVATE -Wall -Wextra -Werror)
+endif()
+add_test(NAME rb_multiprocess COMMAND rb_multiprocess $<TARGET_FILE:resource-broker-coordinator> $<TARGET_FILE:resource-broker-worker> 4319)
+
+
