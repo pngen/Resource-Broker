@@ -61,6 +61,25 @@ install(TARGETS resourcebroker EXPORT ResourceBrokerTargets
 
 install(DIRECTORY include/resourcebroker DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
+# Export the package config so downstream can find_package(ResourceBroker CONFIG).
+configure_package_config_file(
+    cmake/ResourceBrokerConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/ResourceBrokerConfig.cmake"
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/ResourceBroker")
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/ResourceBrokerConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion)
+install(EXPORT ResourceBrokerTargets
+    FILE ResourceBrokerTargets.cmake
+    NAMESPACE ResourceBroker::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/ResourceBroker")
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/ResourceBrokerConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/ResourceBrokerConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/ResourceBroker")
+
+
 if(RESOURCEBROKER_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
