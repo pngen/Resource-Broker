@@ -1,1 +1,7 @@
-# Benchmarks are added in later files.
+add_executable(rb_bench bench_core.cpp)
+target_link_libraries(rb_bench PRIVATE ResourceBroker::resourcebroker)
+if(MSVC)
+    target_compile_options(rb_bench PRIVATE /W4 /WX /EHsc)
+else()
+    target_compile_options(rb_bench PRIVATE -Wall -Wextra -Werror)
+endif()

@@ -857,7 +857,7 @@ static double read_double(ByteReader& r) { std::uint64_t bits = r.u64(); double 
 void Broker::Impl::serialize(std::vector<std::uint8_t>& out) const {
     ByteWriter w(out);
     w.u64(broker_generation);
-    w.gen(epoch);
+    // Coordinator epoch is an incarnation counter, not canonical persisted state.
     // counters
     write_u64(w, next_pool); write_u64(w, next_resource); write_u64(w, next_request);
     write_u64(w, next_reservation); write_u64(w, next_allocation); write_u64(w, next_lease);
@@ -966,7 +966,7 @@ void Broker::Impl::deserialize(const std::vector<std::uint8_t>& in) {
     ByteReader r(std::span<const std::uint8_t>(in.data(), in.size()));
     constexpr std::uint64_t kMaxCount = 5000000;
     broker_generation = r.u64();
-    (void)r.gen<CoordinatorEpochTag>();  // persisted epoch; a fresh coordinator supplies its own
+    // Coordinator epoch is supplied by the constructing coordinator, not persisted.
 
     // counters
     next_pool = r.u64(); next_resource = r.u64(); next_request = r.u64();

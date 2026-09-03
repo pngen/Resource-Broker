@@ -1,1 +1,12 @@
-# Examples are added in later files.
+file(GLOB RB_EXAMPLES CONFIGURE_DEPENDS "0*.cpp")
+foreach(ex IN LISTS RB_EXAMPLES)
+    get_filename_component(name "${ex}" NAME_WE)
+    add_executable(${name} "${ex}")
+    target_link_libraries(${name} PRIVATE ResourceBroker::resourcebroker)
+    target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    if(MSVC)
+        target_compile_options(${name} PRIVATE /W4 /WX /EHsc)
+    else()
+        target_compile_options(${name} PRIVATE -Wall -Wextra -Werror)
+    endif()
+endforeach()
