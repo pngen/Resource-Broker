@@ -253,6 +253,7 @@ struct Broker::Impl {
     Explanation do_explain_request(const ResourceRequest& request, const AuthorityEnvelope& auth);
     void do_activate(ReservationId res, const AuthorityEnvelope& auth);
     void do_release_reservation(ReservationId res, const AuthorityEnvelope& auth);
+    std::vector<ReclamationCandidate> build_reclaimable_candidates(ResourcePoolId pool) const;
 
     void serialize(std::vector<std::uint8_t>& out) const;
     void deserialize(const std::vector<std::uint8_t>& in);
@@ -260,6 +261,33 @@ struct Broker::Impl {
 };  // struct Broker::Impl
 
 // ---- Broker::Impl core operations ----
+std::vector<ReclamationCandidate> Broker::Impl::build_reclaimable_candidates(ResourcePoolId pool) const {
+    std::vector<ReclamationCandidate> out;
+    const auto pit = pools.find(pool);
+    if (pit == pools.end()) return out;
+    for (const auto& kv : reservations) {
+        const auto& rsv = kv.second.desc;
+        if (rsv.state == ReservationState::RELEASED || rsv.state == ReservationState::EXPIRED ||
+            rsv.state == ReservationState::REVOKED || rsv.state == ReservationState::STALE) continue;
+        for (const auto& claim : rsv.claims) {
+            if (claim.pool_id != pool) continue;
+            if (claim.granted_amount.is_zero() && claim.allocated_amount.is_zero()) continue;
+            ReclamationCandidate c;
+            c.reservation_id = rsv.reservation_id;
+            c.pool_id = pool;
+            c.resource_class = claim.resource_class;
+            c.reclaimable_amount = claim.granted_amount.is_zero() ? claim.allocated_amount : claim.granted_amount;
+            c.priority = rsv.priority;
+            c.reclaimability = rsv.reclaimability;
+            c.is_protected = (rsv.reclaimability == Reclaimability::NON_RECLAIMABLE);
+            c.waiting_age_ns = 0;
+            c.consequence = "reclaims " + claim.granted_amount.to_string() + " for pool " + std::to_string(pool.value());
+            out.push_back(c);
+        }
+    }
+    return out;
+}
+
 GrantResult Broker::Impl::do_submit_request(const ResourceRequest& request, const AuthorityEnvelope& auth) {
     GrantResult result;
     result.outcome = RequestOutcome::UNKNOWN;
@@ -692,30 +720,7 @@ void Broker::acknowledge_preemption(PreemptionId preemption, const AuthorityEnve
 
 std::vector<ReclamationCandidate> Broker::reclaimable_candidates(ResourcePoolId pool) const {
     std::lock_guard<std::mutex> lk(mu_);
-    std::vector<ReclamationCandidate> out;
-    const auto pit = impl_->pools.find(pool);
-    if (pit == impl_->pools.end()) return out;
-    for (const auto& kv : impl_->reservations) {
-        const auto& rsv = kv.second.desc;
-        if (rsv.state == ReservationState::RELEASED || rsv.state == ReservationState::EXPIRED ||
-            rsv.state == ReservationState::REVOKED || rsv.state == ReservationState::STALE) continue;
-        for (const auto& claim : rsv.claims) {
-            if (claim.pool_id != pool) continue;
-            if (claim.granted_amount.is_zero() && claim.allocated_amount.is_zero()) continue;
-            ReclamationCandidate c;
-            c.reservation_id = rsv.reservation_id;
-            c.pool_id = pool;
-            c.resource_class = claim.resource_class;
-            c.reclaimable_amount = claim.granted_amount.is_zero() ? claim.allocated_amount : claim.granted_amount;
-            c.priority = rsv.priority;
-            c.reclaimability = rsv.reclaimability;
-            c.is_protected = (rsv.reclaimability == Reclaimability::NON_RECLAIMABLE);
-            c.waiting_age_ns = 0;
-            c.consequence = "reclaims " + claim.granted_amount.to_string() + " for pool " + std::to_string(pool.value());
-            out.push_back(c);
-        }
-    }
-    return out;
+    return impl_->build_reclaimable_candidates(pool);
 }
 
 ReclamationPlan Broker::plan_reclamation(ResourcePoolId pool, ResourceAmount deficit) const {
@@ -726,7 +731,7 @@ ReclamationPlan Broker::plan_reclamation(ResourcePoolId pool, ResourceAmount def
     plan.pool_id = pool;
     plan.resource_class = pit->second.desc.resource_class;
     plan.deficit = deficit;
-    plan.candidates = reclaimable_candidates(pool);
+    plan.candidates = impl_->build_reclaimable_candidates(pool);
     std::sort(plan.candidates.begin(), plan.candidates.end(), [](const ReclamationCandidate& a, const ReclamationCandidate& b) {
         if (a.priority != b.priority) return priority_rank(a.priority) < priority_rank(b.priority);
         if (a.reclaimability != b.reclaimability) return reclaimability_rank(a.reclaimability) > reclaimability_rank(b.reclaimability);
@@ -734,6 +739,7 @@ ReclamationPlan Broker::plan_reclamation(ResourcePoolId pool, ResourceAmount def
     });
     const ResourceClass cls = pit->second.desc.resource_class;
     const ResourceAmount zero = ResourceAmount::of_class(cls, 0);
+    plan.covered = zero;
     ResourceAmount need = deficit;
     for (const auto& c : plan.candidates) {
         if (!(need > plan.covered)) break;

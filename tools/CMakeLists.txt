@@ -6,6 +6,15 @@ else()
     target_compile_options(resource-broker-coordinator PRIVATE -Wall -Wextra -Werror)
 endif()
 
+
+add_executable(resource-broker cli.cpp)
+target_link_libraries(resource-broker PRIVATE ResourceBroker::resourcebroker)
+if(MSVC)
+    target_compile_options(resource-broker PRIVATE /W4 /WX /EHsc)
+else()
+    target_compile_options(resource-broker PRIVATE -Wall -Wextra -Werror)
+endif()
+
 add_executable(resource-broker-worker worker.cpp)
 target_link_libraries(resource-broker-worker PRIVATE ResourceBroker::resourcebroker ws2_32)
 if(MSVC)
