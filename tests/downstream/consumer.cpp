@@ -53,10 +53,11 @@ int main() {
     // Contention: a second 8-GiB request must not be granted silently.
     ResourceRequest r2; r2.request_id = ResourceRequestId(2); r2.owner = OwnerId(2); r2.tenant = TenantId(2);
     ResourceRequirement rq2; rq2.resource_class = ResourceClass::GPU_MEMORY_BYTES;
-    rq2.requested = ResourceAmount::bytes(Bytes(6 * MiB * 1024)); rq2.minimum = rq2.requested; rq2.preferred = rq2.requested; rq2.semantics = CapacitySemantics::EXACT;
+    rq2.requested = ResourceAmount::bytes(Bytes(7 * MiB * 1024)); rq2.minimum = rq2.requested; rq2.preferred = rq2.requested; rq2.semantics = CapacitySemantics::EXACT;
     r2.requirements.push_back(rq2); r2.priority = Priority::NORMAL;
     const GrantResult g2 = b.submit_request(r2, auth);
     std::fprintf(stderr, "contention outcome = %s\n", to_string(g2.outcome));
+    if (g2.outcome == RequestOutcome::GRANT || g2.outcome == RequestOutcome::GRANT_PARTIAL) { std::fprintf(stderr, "contention should not silently grant\n"); return 1; }
 
     // Release + accounting closure.
     b.release_allocation(aid, auth);
