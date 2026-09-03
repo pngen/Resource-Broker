@@ -1,0 +1,42 @@
+# Build directories
+/build/
+/build-*/
+/out/
+/cmake-build-*/
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+Testing/
+*.cmake.stamp
+
+# Compiled objects and libraries
+*.obj
+*.o
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.pdb
+*.ilk
+*.exe
+*.out
+
+# IDE / editor
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Persistence / fixture output
+*.rbstate
+*.rbstate.tmp
+*.bin.tmp
+/scratch/
+scripts/job_*.cmd
+scripts/probe_env.cmd

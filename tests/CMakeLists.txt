@@ -1,0 +1,18 @@
+add_executable(rb_smoke test_core_smoke.cpp)
+target_link_libraries(rb_smoke PRIVATE ResourceBroker::resourcebroker)
+if(MSVC)
+    target_compile_options(rb_smoke PRIVATE /W4 /WX /EHsc)
+else()
+    target_compile_options(rb_smoke PRIVATE -Wall -Wextra -Werror)
+endif()
+add_test(NAME rb_smoke COMMAND rb_smoke)
+
+add_executable(rb_broker test_broker.cpp)
+target_link_libraries(rb_broker PRIVATE ResourceBroker::resourcebroker)
+if(MSVC)
+    target_compile_options(rb_broker PRIVATE /W4 /WX /EHsc)
+else()
+    target_compile_options(rb_broker PRIVATE -Wall -Wextra -Werror)
+endif()
+add_test(NAME rb_broker COMMAND rb_broker)
+
